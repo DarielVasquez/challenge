@@ -257,7 +257,7 @@ func getArrayValueByPrefix(contentFile string, prefix string) []string {
     return values
 }
 
-//extracts the email content
+// Extracts the email content
 func getContent(contentFile string) string {
 	scanner := bufio.NewScanner(strings.NewReader(contentFile))
 	var content string
