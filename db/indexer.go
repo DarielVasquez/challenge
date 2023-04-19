@@ -8,8 +8,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
 )
 
@@ -33,6 +35,19 @@ type Email struct {
 }
 
 func main() {
+	// Create a file to store the profiling data
+	f, err := os.Create("cpu.prof")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	// Start CPU profiling
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Fatal(err)
+	}
+	defer pprof.StopCPUProfile()
+	
 	// Access command-line arguments
 	args := os.Args
 
@@ -52,7 +67,7 @@ func main() {
 	
 	// Prompt the user for input
 	fmt.Print("Enter user email: ")
-	_, err := fmt.Scan(&userEmail)
+	_, err = fmt.Scan(&userEmail)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -70,7 +85,7 @@ func main() {
 		return
 	}
 	fmt.Println("Generating JSON...")
-
+	
 	createJSONUsers(userEmail, password, stream, dir)
 	
 	fmt.Println("Done!")
