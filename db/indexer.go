@@ -179,7 +179,9 @@ func getUserDocuments(dir string) []Email {
 		if err != nil {
 			return err
 		}
-		email := parseEmail(string(content))
+		// Convert single quotes to ASCII codes
+		contentAscii := strings.Replace(string(content), "'", "&#39;", -1)
+		email := parseEmail(string(contentAscii))
 		emails = append(emails, email)
 		return nil
 	})
