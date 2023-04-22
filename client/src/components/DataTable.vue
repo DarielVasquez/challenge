@@ -16,34 +16,47 @@
           <table class="table-auto w-full">
             <thead>
               <tr class="bg-gray-200 cursor-pointer">
-                <th class="px-4 py-2 w-2/6">Subject</th>
-                <th class="px-4 py-2 w-1/6">Origin</th>
-                <th class="px-4 py-2 w-1/6">From</th>
-                <th class="px-4 py-2 w-1/6">To</th>
-                <th class="px-4 py-2 w-1/6">Folder</th>
+                <th class="px-4 py-2" @click="sortTable('subject')">
+                  Subject
+                  <sort-icons-vue :sortDirection="sortDirection" header="subject"></sort-icons-vue>
+                </th>
+                <th class="px-4 py-2" @click="sortTable('x_origin')">
+                  Origin
+                  <sort-icons-vue :sortDirection="sortDirection" header="x_origin"></sort-icons-vue>
+                </th>
+                <th class="px-4 py-2" @click="sortTable('from')">
+                  From
+                  <sort-icons-vue :sortDirection="sortDirection" header="from"></sort-icons-vue>
+                </th>
+                <th class="px-4 py-2" @click="sortTable('to_0_')">
+                  To
+                  <sort-icons-vue :sortDirection="sortDirection" header="to_0_"></sort-icons-vue>
+                </th>
+                <th class="px-4 py-2 min-w-[105px]" @click="sortTable('x_folder')">
+                  Folder
+                  <sort-icons-vue :sortDirection="sortDirection" header="x_folder"></sort-icons-vue>
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="email in emails"
+                v-for="email in sortedTableEmails"
                 :key="email._timestamp"
                 class="border-t mx-auto cursor-pointer"
                 @click="selectFeaturedEmail(email)"
               >
-                <td class="px-4 py-2 w-2/6">
-                  <div v-html="highlight(email.subject)"></div>
-                </td>
-                <td class="px-4 py-2 w-1/6" v-html="highlight(email.x_origin)"></td>
-                <td class="px-4 py-2 w-1/6" v-html="highlight(email.from)"></td>
-                <td class="px-4 py-2 w-1/6" v-html="highlight(email.to_0_)"></td>
-                <td class="px-4 py-2 w-1/6" v-html="getEmailFolder(email.x_folder)"></td>
+                <td class="px-4 py-2" v-html="highlight(email.subject)"></td>
+                <td class="px-4 py-2" v-html="highlight(email.x_origin)"></td>
+                <td class="px-4 py-2" v-html="highlight(email.from)"></td>
+                <td class="px-4 py-2" v-html="highlight(email.to_0_)?.split(',').splice(0, 5)"></td>
+                <td class="px-4 py-2" v-html="highlight(email.x_folder)"></td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
       <div class="px-5 py-10 overflow-x-auto">
-        <div v-html="decodedContent(highlight(featuredEmail.content))"></div>
+        <div v-html="highlight(featuredEmail.content)"></div>
       </div>
     </div>
   </div>
@@ -52,14 +65,20 @@
 <script>
 import axios from 'axios'
 import he from 'he'
+import SortIconsVue from './SortIcons.vue'
 export default {
   name: 'DataTable',
+  components: {
+    SortIconsVue
+  },
   data() {
     return {
       emails: [],
-      featuredEmail: {},
+      featuredEmail: {}, // Email that is displayed on-screen
+      sortBy: '', // Current sort column
+      sortDirection: {}, // Sort direction for table headers
       searchQuery: '',
-      searchQueryASCII: '',
+      searchQueryASCII: '', // Search query converted to ASCII for api reading
       errorMsg: '',
       payload: {
         query: {
@@ -94,7 +113,12 @@ export default {
           if (response.data.hits.length === 0) {
             this.errorMsg = 'No data was found, please try a different query.'
           } else {
-            this.emails = response.data.hits
+            this.emails = response.data.hits.map((email) => {
+              email.content = he.decode(email.content).replace(/\n/g, '<br>')
+              email.subject = decodeURIComponent(email.subject.replace(/=3F/g, '?'))
+              email.x_folder = email.x_folder.split('\\').pop()
+              return email
+            })
             this.featuredEmail = response.data.hits[0]
             this.errorMsg = ''
           }
@@ -102,19 +126,6 @@ export default {
         .catch((error) => {
           this.errorMsg = 'Error retrieving data.'
         })
-    },
-    getEmailFolder(emailFolder) {
-      // Split to get the file folder from the string
-      const folder = emailFolder || ''
-      return folder.split('\\').pop()
-    },
-    decodedContent(content) {
-      if (content !== undefined) {
-        // Use he.decode() to decode HTML entities
-        const decoded = he.decode(content)
-        // Replace newline characters with HTML line breaks
-        return decoded.replace(/\n/g, '<br>')
-      }
     },
     highlight(fileName) {
       if (this.searchQuery === '') {
@@ -128,12 +139,39 @@ export default {
     },
     selectFeaturedEmail(email) {
       this.featuredEmail = email
+    },
+    sortTable(column) {
+      if (this.sortBy === column) {
+        this.sortDirection[column] = this.sortDirection[column] === 'asc' ? 'desc' : 'asc'
+      } else {
+        this.sortBy = column
+        this.sortDirection[column] = 'asc'
+      }
+      for (const key in this.sortDirection) {
+        if (this.sortDirection.hasOwnProperty(key)) {
+          if (column !== key) {
+            this.sortDirection[key] = ''
+          }
+        }
+      }
     }
   },
   computed: {
     changeQuery() {
       // Update sql query with the search input
       this.payload.query.sql = `SELECT * FROM emails WHERE match_all('${this.searchQueryASCII}')`
+    },
+    sortedTableEmails() {
+      // Sort the array of emails according to the table header
+      const column = this.sortBy
+      const direction = this.sortDirection[column]
+      return this.emails.sort((a, b) => {
+        const aValue = a[column]?.toUpperCase()
+        const bValue = b[column]?.toUpperCase()
+        if (aValue < bValue) return direction === 'asc' ? -1 : 1
+        if (aValue > bValue) return direction === 'asc' ? 1 : -1
+        return 0
+      })
     }
   }
 }
