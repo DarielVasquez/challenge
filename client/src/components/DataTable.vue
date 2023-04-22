@@ -1,40 +1,49 @@
 <template>
   <div class="container mx-auto">
+    Search:
     <input
       type="text"
       ref="inputRef"
       v-model.trim="searchQuery"
       @keyup.enter="changeQuery, getEmails()"
-      class="border border-gray-500 rounded-md text-blue-500 bg-white px-2 py-1"
+      class="border border-gray-500 rounded-md bg-white px-2 py-1"
     />
     <div v-if="errorMsg">{{ errorMsg }}</div>
-    <div class="flex flex-col">
-      <h1 class="text-2xl font-bold mb-4">Emails Data Table</h1>
-      <div class="overflow-x-auto">
-        <table class="table-auto w-full">
-          <thead>
-            <tr class="bg-gray-200">
-              <th class="px-4 py-2">Subject</th>
-              <th class="px-4 py-2">Origin</th>
-              <th class="px-4 py-2">From</th>
-              <th class="px-4 py-2">To</th>
-              <th class="px-4 py-2">Folder</th>
-              <th class="px-4 py-2">Content</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="email in emails" :key="email._timestamp" class="border-t mx-auto">
-              <td class="px-4 py-2" v-html="highlight(email.subject)"></td>
-              <td class="px-4 py-2" v-html="email.x_origin"></td>
-              <td class="px-4 py-2" v-html="email.from"></td>
-              <td class="px-4 py-2" v-html="email.to_0_"></td>
-              <td class="px-4 py-2" v-html="getEmailFolder(email.x_folder)"></td>
-              <td class="px-4 py-2">
-                <div v-html="decodedContent(highlight(email.content.slice(0, 50)))"></div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="lg:grid lg:grid-cols-3 bg-white">
+      <div class="flex flex-col lg:col-span-2">
+        <h1 class="text-2xl font-bold mb-4">Emails Data Table</h1>
+        <div class="overflow-x-auto">
+          <table class="table-auto w-full">
+            <thead>
+              <tr class="bg-gray-200 cursor-pointer">
+                <th class="px-4 py-2 w-2/6">Subject</th>
+                <th class="px-4 py-2 w-1/6">Origin</th>
+                <th class="px-4 py-2 w-1/6">From</th>
+                <th class="px-4 py-2 w-1/6">To</th>
+                <th class="px-4 py-2 w-1/6">Folder</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="email in emails"
+                :key="email._timestamp"
+                class="border-t mx-auto cursor-pointer"
+                @click="selectFeaturedEmail(email)"
+              >
+                <td class="px-4 py-2 w-2/6">
+                  <div v-html="highlight(email.subject)"></div>
+                </td>
+                <td class="px-4 py-2 w-1/6" v-html="highlight(email.x_origin)"></td>
+                <td class="px-4 py-2 w-1/6" v-html="highlight(email.from)"></td>
+                <td class="px-4 py-2 w-1/6" v-html="highlight(email.to_0_)"></td>
+                <td class="px-4 py-2 w-1/6" v-html="getEmailFolder(email.x_folder)"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="px-5 py-10 overflow-x-auto">
+        <div v-html="decodedContent(highlight(featuredEmail.content))"></div>
       </div>
     </div>
   </div>
@@ -48,6 +57,7 @@ export default {
   data() {
     return {
       emails: [],
+      featuredEmail: {},
       searchQuery: '',
       searchQueryASCII: '',
       errorMsg: '',
@@ -81,12 +91,16 @@ export default {
           }
         })
         .then((response) => {
-          console.log(response.data.hits)
-          this.emails = response.data.hits
-          this.errorMsg = ''
+          if (response.data.hits.length === 0) {
+            this.errorMsg = 'No data was found, please try a different query.'
+          } else {
+            this.emails = response.data.hits
+            this.featuredEmail = response.data.hits[0]
+            this.errorMsg = ''
+          }
         })
         .catch((error) => {
-          this.errorMsg = 'Error retrieving data'
+          this.errorMsg = 'Error retrieving data.'
         })
     },
     getEmailFolder(emailFolder) {
@@ -95,20 +109,25 @@ export default {
       return folder.split('\\').pop()
     },
     decodedContent(content) {
-      // Use he.decode() to decode HTML entities
-      const decoded = he.decode(content)
-      // Replace newline characters with HTML line breaks
-      return decoded.replace(/\n/g, '<br>')
+      if (content !== undefined) {
+        // Use he.decode() to decode HTML entities
+        const decoded = he.decode(content)
+        // Replace newline characters with HTML line breaks
+        return decoded.replace(/\n/g, '<br>')
+      }
     },
     highlight(fileName) {
       if (this.searchQuery === '') {
         return fileName
       } else {
-        return fileName.replace(
+        return fileName?.replace(
           this.searchQueryASCII,
           `<span class="bg-yellow-500">${this.searchQueryASCII}</span>`
         )
       }
+    },
+    selectFeaturedEmail(email) {
+      this.featuredEmail = email
     }
   },
   computed: {
