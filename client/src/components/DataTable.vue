@@ -41,7 +41,7 @@
           <div v-if="errorMsg" class="text-center text-red-500">{{ errorMsg }}</div>
           <div class="overflow-x-auto border border-gray-300 rounded-md">
             <table class="table-auto w-full">
-              <thead>
+              <thead class="sticky top-0 drop-shadow">
                 <tr class="bg-gray-200 cursor-pointer">
                   <th class="px-4 py-2 min-w-[120px]" @click="sortTable('subject')">
                     <span> Subject </span>
@@ -101,12 +101,10 @@
           <div class="flex justify-center text-center">
             Showing {{ indexOfFirstEmail + 1 }} to
             {{ indexOfLastEmail > emails.length ? emails.length : indexOfLastEmail }} of
-            {{ emails.length }} entries in {{ elapsedTime.toFixed(2) }}ms
+            {{ emails.length }} entries ({{ elapsedTime.toFixed(2) }} seconds)
           </div>
         </div>
-        <div
-          class="px-5 py-10 overflow-x-auto border border-gray-300 rounded-md h-fit max-h-[80vh]"
-        >
+        <div class="px-5 py-10 overflow-x-auto border rounded-md h-fit max-h-[80vh]">
           <div class="font-bold" v-html="highlight(featuredEmail.subject)"></div>
           <div v-html="highlight(featuredEmail.content)"></div>
         </div>
@@ -176,7 +174,7 @@ export default {
           } else {
             this.emails = response.data.hits.map((email) => {
               const endTime = performance.now()
-              this.elapsedTime = endTime - startTime
+              this.elapsedTime = (endTime - startTime) / 1000
               email.content = he.decode(email.content).replace(/\n/g, '<br>')
               email.subject = he.decode(email.subject)
               email.x_folder = email.x_folder.split('\\').pop()
@@ -277,6 +275,20 @@ export default {
   width: 8px;
   height: 8px;
   background-color: #f3f3f3;
+  border-radius: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-track-piece {
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-corner {
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {

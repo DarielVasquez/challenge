@@ -14,7 +14,8 @@ import {
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
   PrSpinner,
-  MdSearch
+  MdSearch,
+  MdEmail
 } from 'oh-vue-icons/icons'
 
 addIcons(
@@ -26,7 +27,8 @@ addIcons(
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
   PrSpinner,
-  MdSearch
+  MdSearch,
+  MdEmail
 )
 
 const app = createApp(App)
