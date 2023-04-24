@@ -8,7 +8,7 @@
     <template v-else>
       <div class="lg:grid lg:grid-cols-3 gap-4 bg-white p-1 lg:p-0 space-y-4 lg:space-y-0">
         <div class="flex flex-col lg:col-span-2 border rounded-md h-fit max-h-[80vh] p-5">
-          <div class="sm:flex justify-between p-2 space-y-4">
+          <div class="sm:flex justify-between p-2 space-y-4 sm:space-y-0">
             <div class="text-center self-center">
               <span>Show </span>
               <select
@@ -162,10 +162,10 @@ export default {
     getEmails() {
       const startTime = performance.now()
       axios
-        .post('http://localhost:5080/api/default/_search', this.payload, {
+        .post(import.meta.env.VITE_URI, this.payload, {
           auth: {
-            username: 'root@example.com',
-            password: 'cQhEVBboURHqqKd6'
+            username: import.meta.env.VITE_AUTH_USERNAME,
+            password: import.meta.env.VITE_AUTH_PASSWORD
           }
         })
         .then((response) => {
