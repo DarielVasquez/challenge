@@ -12,7 +12,9 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaAngleDoubleLeft,
-  FaAngleDoubleRight
+  FaAngleDoubleRight,
+  PrSpinner,
+  MdSearch
 } from 'oh-vue-icons/icons'
 
 addIcons(
@@ -22,7 +24,9 @@ addIcons(
   FaChevronLeft,
   FaChevronRight,
   FaAngleDoubleLeft,
-  FaAngleDoubleRight
+  FaAngleDoubleRight,
+  PrSpinner,
+  MdSearch
 )
 
 const app = createApp(App)
