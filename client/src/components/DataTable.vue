@@ -148,6 +148,7 @@ export default {
   },
   created() {
     this.getEmails()
+    this.getHelloWorld()
   },
   mounted() {
     this.$refs.inputRef?.focus()
@@ -195,6 +196,16 @@ export default {
         .catch((error) => {
           this.errorMsg = 'Error retrieving data.'
           this.loading = false
+        })
+    },
+    getHelloWorld() {
+      axios
+        .get(import.meta.env.VITE_TEST_API)
+        .then((response) => {
+          console.log(response)
+        })
+        .catch((error) => {
+          console.log(error)
         })
     },
     highlight(fileName) {

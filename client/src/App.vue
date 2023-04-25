@@ -1,13 +1,12 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
 import Header from './components/Header.vue'
-import DataTable from './components/DataTable.vue'
+import HomeView from './views/HomeView.vue'
 </script>
 
 <template>
   <div>
     <Header></Header>
-    <DataTable></DataTable>
+    <HomeView></HomeView>
   </div>
 </template>
 
