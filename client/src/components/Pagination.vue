@@ -33,34 +33,44 @@
 </template>
 
 <script>
+import { computed } from 'vue'
 export default {
   props: ['currentPage', 'totalPages'],
-  methods: {
-    firstPage() {
-      if (this.currentPage > 1) {
-        this.$emit('update:currentPage', 1)
-      }
-    },
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.$emit('update:currentPage', this.currentPage - 1)
-      }
-    },
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.$emit('update:currentPage', this.currentPage + 1)
-      }
-    },
-    lastPage() {
-      if (this.currentPage < this.totalPages) {
-        this.$emit('update:currentPage', this.totalPages)
+  setup(props, { emit }) {
+    const firstPage = () => {
+      if (props.currentPage > 1) {
+        emit('update:currentPage', 1)
       }
     }
-  },
-  computed: {
-    // Styles
-    chevronStyles() {
+
+    const prevPage = () => {
+      if (props.currentPage > 1) {
+        emit('update:currentPage', props.currentPage - 1)
+      }
+    }
+
+    const nextPage = () => {
+      if (props.currentPage < props.totalPages) {
+        emit('update:currentPage', props.currentPage + 1)
+      }
+    }
+
+    const lastPage = () => {
+      if (props.currentPage < props.totalPages) {
+        emit('update:currentPage', props.totalPages)
+      }
+    }
+
+    const chevronStyles = computed(() => {
       return 'text-slate-600 cursor-pointer'
+    })
+
+    return {
+      firstPage,
+      prevPage,
+      nextPage,
+      lastPage,
+      chevronStyles
     }
   }
 }

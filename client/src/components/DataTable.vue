@@ -30,7 +30,6 @@
               </div>
               <input
                 type="search"
-                ref="inputRef"
                 class="search block w-full p-2 pl-10 border border-gray-300 rounded-md focus:ring-gray-500 focus:border-gray-700 focus:outline-none"
                 placeholder="Search..."
                 v-model.trim="searchQuery"
@@ -114,6 +113,7 @@
 </template>
 
 <script>
+import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 import he from 'he'
 import SortIconsVue from './SortIcons.vue'
@@ -124,46 +124,22 @@ export default {
     SortIconsVue,
     PaginationVue
   },
-  data() {
-    return {
-      emails: [],
-      featuredEmail: {}, // Email that is displayed on-screen
-      sortBy: '', // Current sort column
-      sortDirection: {}, // Sort direction for table headers
-      currentPage: 1, // Current page for pagination in data table
-      emailsPerPage: 10,
-      limits: [5, 10, 15, 20, 25, 50, 100, 500, 1000], // Array for amount of entries per page
-      elapsedTime: 0, // Elapsed time it takes for the api to execute
-      searchQuery: '',
-      searchQueryASCII: '', // Search query converted to ASCII for api reading
-      errorMsg: '',
-      loading: true,
-      payload: {
-        query: {
-          sql: 'SELECT * FROM emails',
-          size: 1000
-        }
+  setup() {
+    const emails = ref([])
+    const elapsedTime = ref(0)
+    const errorMsg = ref('')
+    const loading = ref(true)
+    const payload = ref({
+      query: {
+        sql: 'SELECT * FROM emails',
+        size: 1000
       }
-    }
-  },
-  created() {
-    this.getEmails()
-    this.getHelloWorld()
-  },
-  mounted() {
-    this.$refs.inputRef?.focus()
-  },
-  watch: {
-    // Update search query to replace single quotes to ASCII
-    searchQuery(search) {
-      this.searchQueryASCII = search.replace(/'/g, '&#39;')
-    }
-  },
-  methods: {
-    getEmails() {
+    })
+
+    const getEmails = () => {
       const startTime = performance.now()
       axios
-        .post(import.meta.env.VITE_URI, this.payload, {
+        .post(import.meta.env.VITE_URI, payload.value, {
           auth: {
             username: import.meta.env.VITE_AUTH_USERNAME,
             password: import.meta.env.VITE_AUTH_PASSWORD
@@ -171,110 +147,173 @@ export default {
         })
         .then((response) => {
           if (response.data.hits.length === 0) {
-            this.errorMsg = 'No data was found, please try a different query.'
+            errorMsg.value = 'No data was found, please try a different query.'
           } else {
-            this.emails = response.data.hits.map((email) => {
+            emails.value = response.data.hits.map((email) => {
               const endTime = performance.now()
-              this.elapsedTime = (endTime - startTime) / 1000
+              elapsedTime.value = (endTime - startTime) / 1000
               email.content = he.decode(email.content).replace(/\n/g, '<br>')
               email.subject = he.decode(email.subject)
               email.x_folder = email.x_folder.split('\\').pop()
-              this.currentPage = 1 // Set current page back to 1
-              for (const key in this.sortDirection) {
-                // Set all sort headers to default
-                if (this.sortDirection.hasOwnProperty(key)) {
-                  this.sortDirection[key] = ''
-                }
-              }
-              this.loading = false
+              currentPage.value = 1 // Set current page back to 1
+              sortDirection.value = {} // Set all sort headers to default
+              loading.value = false
               return email
             })
-            this.featuredEmail = response.data.hits[0]
-            this.errorMsg = ''
+            featuredEmail.value = response.data.hits[0]
+            errorMsg.value = ''
           }
         })
         .catch((error) => {
-          this.errorMsg = 'Error retrieving data.'
-          this.loading = false
+          errorMsg.value = 'Error retrieving data.'
+          loading.value = false
+          console.log(error)
         })
-    },
-    getHelloWorld() {
+    }
+
+    const getHelloWorld = () => {
       axios
         .get(import.meta.env.VITE_TEST_API)
         .then((response) => {
-          console.log(response)
+          console.log(response.data)
         })
         .catch((error) => {
           console.log(error)
         })
-    },
-    highlight(fileName) {
+    }
+
+    // Featured Email
+
+    const featuredEmail = ref({})
+
+    const selectFeaturedEmail = (email) => {
+      featuredEmail.value = email
+    }
+
+    // Search Query
+
+    const searchQuery = ref('')
+    const searchQueryASCII = ref('')
+
+    const highlight = (fileName) => {
       if (!fileName) {
         return '(untitled)'
       }
-      if (this.searchQuery === '') {
+      if (searchQuery.value === '') {
         return fileName
       } else {
-        const searchPattern = new RegExp(`(?<!<[^>]*)(${this.searchQuery})`, 'gi') // Excludes <br> tags from getting highlighted
+        const searchPattern = new RegExp(`(?<!<[^>]*)(${searchQuery.value})`, 'gi') // Excludes <br> tags from getting highlighted
         return fileName?.replaceAll(searchPattern, (match) => {
           return `<span class="bg-yellow-500">${match}</span>`
         })
       }
-    },
-    selectFeaturedEmail(email) {
-      this.featuredEmail = email
-    },
-    sortTable(column) {
-      if (this.sortBy === column) {
-        this.sortDirection[column] = this.sortDirection[column] === 'asc' ? 'desc' : 'asc'
+    }
+
+    watch(searchQuery, (newValue) => {
+      // Update search query to replace single quotes to ASCII
+      searchQueryASCII.value = newValue.replace(/'/g, '&#39;')
+    })
+
+    const changeQuery = computed(() => {
+      // Update sql query with the search input
+      payload.value.query.sql = `SELECT * FROM emails WHERE match_all('${searchQueryASCII.value}')`
+    })
+
+    // Sort Table
+
+    const sortBy = ref('')
+    const sortDirection = ref({})
+
+    const sortTable = (column) => {
+      if (sortBy.value === column) {
+        sortDirection.value[column] = sortDirection.value[column] === 'asc' ? 'desc' : 'asc'
       } else {
-        this.sortBy = column
-        this.sortDirection[column] = 'asc'
+        sortBy.value = column
+        sortDirection.value[column] = 'asc'
       }
-      for (const key in this.sortDirection) {
-        if (this.sortDirection.hasOwnProperty(key)) {
+      for (const key in sortDirection.value) {
+        if (sortDirection.value.hasOwnProperty(key)) {
           if (column !== key) {
-            this.sortDirection[key] = ''
+            sortDirection.value[key] = ''
           }
         }
       }
-    },
-    handleLimitChange(event) {
-      this.currentPage = 1
-      this.emailsPerPage = event.target.value
-    },
-    updateCurrentPage(value) {
-      this.currentPage = value
     }
-  },
-  computed: {
-    changeQuery() {
-      // Update sql query with the search input
-      this.payload.query.sql = `SELECT * FROM emails WHERE match_all('${this.searchQueryASCII}')`
-    },
-    sortedTableEmails() {
+
+    const sortedTableEmails = computed(() => {
       // Sort the array of emails according to the table header
-      const column = this.sortBy
-      const direction = this.sortDirection[column]
-      return this.filteredEmails.sort((a, b) => {
+      const column = sortBy.value
+      const direction = sortDirection.value[column]
+      return filteredEmails.value.sort((a, b) => {
         const aValue = a[column]?.toUpperCase()
         const bValue = b[column]?.toUpperCase()
         if (aValue < bValue) return direction === 'asc' ? -1 : 1
         if (aValue > bValue) return direction === 'asc' ? 1 : -1
         return 0
       })
-    },
-    indexOfLastEmail() {
-      return this.currentPage * Math.round(this.emailsPerPage / 5) * 5
-    },
-    indexOfFirstEmail() {
-      return this.indexOfLastEmail - Math.round(this.emailsPerPage / 5) * 5
-    },
-    filteredEmails() {
-      return this.emails.slice(this.indexOfFirstEmail, this.indexOfLastEmail)
-    },
-    totalPages() {
-      return Math.ceil(this.emails.length / this.emailsPerPage)
+    })
+
+    // Pagination
+
+    const currentPage = ref(1)
+    const emailsPerPage = ref(10)
+    const limits = ref([5, 10, 15, 20, 25, 50, 100, 500, 1000])
+
+    const handleLimitChange = (event) => {
+      currentPage.value = 1
+      emailsPerPage.value = event.target.value
+    }
+
+    const updateCurrentPage = (value) => {
+      currentPage.value = value
+    }
+
+    const indexOfLastEmail = computed(() => {
+      return currentPage.value * Math.round(emailsPerPage.value / 5) * 5
+    })
+
+    const indexOfFirstEmail = computed(() => {
+      return indexOfLastEmail.value - Math.round(emailsPerPage.value / 5) * 5
+    })
+
+    const filteredEmails = computed(() => {
+      return emails.value.slice(indexOfFirstEmail.value, indexOfLastEmail.value)
+    })
+
+    const totalPages = computed(() => {
+      return Math.ceil(emails.value.length / emailsPerPage.value)
+    })
+
+    // API Requests
+
+    getEmails()
+    getHelloWorld()
+
+    return {
+      emails,
+      featuredEmail,
+      sortBy,
+      sortDirection,
+      currentPage,
+      emailsPerPage,
+      limits,
+      elapsedTime,
+      searchQuery,
+      searchQueryASCII,
+      errorMsg,
+      loading,
+      payload,
+      getEmails,
+      highlight,
+      selectFeaturedEmail,
+      sortTable,
+      handleLimitChange,
+      updateCurrentPage,
+      changeQuery,
+      sortedTableEmails,
+      indexOfLastEmail,
+      indexOfFirstEmail,
+      totalPages
     }
   }
 }
